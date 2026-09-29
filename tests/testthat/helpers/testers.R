@@ -1270,11 +1270,17 @@ outdmin_tester_aug <- function(
         sub_formul_no_grp <- update(sub_formul,
                                     . ~ . - (1 | z.1) - (xco.1 | z.1))
         ###
+        resp_coefs_nm <- if (packageVersion("mclogit") >= "0.9.15") {
+          "Logit eqn."
+        } else {
+          "Response categories"
+        }
         expect_identical(
           dimnames(coefs_crr),
-          list("Response categories" = tail(augdat_cats, -1),
-               "Predictors" = colnames(model.matrix(sub_formul_no_grp,
-                                                    data = sub_data))),
+          setNames(list(tail(augdat_cats, -1),
+                        colnames(model.matrix(sub_formul_no_grp,
+                                              data = sub_data))),
+                   c(resp_coefs_nm, "Predictors")),
           info = info_str
         )
 
@@ -1285,7 +1291,21 @@ outdmin_tester_aug <- function(
         expect_named(ranef_crr, NULL, info = info_str)
         expect_true(is.matrix(ranef_crr[[1]]), info = info_str)
         expect_true(is.numeric(ranef_crr[[1]]), info = info_str)
-        if (packageVersion("Matrix") >= "1.5-0") {
+        if (packageVersion("mclogit") >= "0.9.15") {
+          ranef_nms <- apply(
+            expand.grid(resp_val = tail(levels(eval_lhs(sub_formul, dat)), -1),
+                        coef_val = coef_nms,
+                        grpl_val = levels(dat$z.1)),
+            1,
+            function(x_row) {
+              paste0(x_row["resp_val"], "~", x_row["coef_val"], "|",
+                     x_row["grpl_val"])
+            }
+          )
+          expect_identical(dimnames(ranef_crr[[1]]),
+                           list(ranef_nms, NULL),
+                           info = info_str)
+        } else if (packageVersion("Matrix") >= "1.5-0") {
           expect_null(dimnames(ranef_crr[[1]]), info = info_str)
         } else {
           expect_identical(dimnames(ranef_crr[[1]]),
@@ -1862,6 +1882,50 @@ pl_tester <- function(pl,
 }
 
 # A helper function for testing the structure of an object returned by
+# proj_epred().
+#
+# @param pe An object resulting from a call to proj_epred().
+# @param len_expected The number of `projection` objects used for `pe`.
+# @param nprjdraws_expected The expected number of projected draws in `pe`.
+# @param wdraws_prj_expected The expected value for the `wdraws_prj` attribute
+#   of `pe`.
+# @param nobsv_expected The expected number of observations in `pe`.
+# @param ncats_nlats_expected A list of length `len_expected`. Each element is
+#   either an empty integer (for the traditional or latent projection without
+#   categories) or a single integer giving the expected number of response
+#   categories (or latent terms).
+# @param info_str A single character string giving information to be printed in
+#   case of failure.
+#
+# @return `TRUE` (invisible).
+pe_tester <- function(pe,
+                      len_expected = 1,
+                      nprjdraws_expected = nclusters_pred_tst,
+                      wdraws_prj_expected = NULL,
+                      nobsv_expected = nobsv,
+                      ncats_nlats_expected = replicate(len_expected,
+                                                       integer(),
+                                                       simplify = FALSE),
+                      info_str) {
+  if (len_expected == 1) {
+    pe <- list(pe)
+  } else {
+    expect_type(pe, "list")
+    expect_length(pe, len_expected)
+  }
+  for (j in seq_along(pe)) {
+    expect_identical(
+      dim(pe[[!!j]]),
+      c(nprjdraws_expected, nobsv_expected, ncats_nlats_expected[[!!j]]),
+      info = info_str
+    )
+    expect_identical(attr(pe[[!!j]], "wdraws_prj"), wdraws_prj_expected,
+                     info = info_str)
+  }
+  return(invisible(TRUE))
+}
+
+# A helper function for testing the structure of an object returned by
 # proj_predict().
 #
 # @param pp An object resulting from a call to proj_predict().
@@ -2207,6 +2271,9 @@ vsel_tester <- function(
         ll_forPSIS <- vs$refmodel$family$latent_ll_oscale(
           mu_offs_oscale_tst, dis = vs$refmodel$dis,
           y_oscale = vs$refmodel$y_oscale, wobs = vs$refmodel$wobs,
+          cens = eval_el2_not_null(attr(vs$refmodel$family$latent_ll_oscale,
+                                        "cens_var"),
+                                   vs$refmodel$fetch_data()),
           cl_ref = seq_along(vs$refmodel$wdraws_ref),
           wdraws_ref = vs$refmodel$wdraws_ref
         )
@@ -2957,7 +3024,7 @@ plot_vsel_tester <- function(
   expect_identical(attr(plot_vsel, "projpred_ranking_abbreviated"),
                    attr_abbv_expected, info = info_str)
   if (run_snaps) {
-    vdiffr::expect_doppelganger(info_str, plot_vsel)
+    expect_doppelganger_cust(info_str, plot_vsel)
   }
 
   return(invisible(TRUE))

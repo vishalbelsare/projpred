@@ -81,7 +81,7 @@ tau0 <- p0 / (D - p0) * 1 / sqrt(N)
 We now fit the reference model to the data.
 To make this vignette build faster, we use only 2 MCMC chains and 1000 iterations per chain (with half of them being discarded as warmup draws).
 In practice, 4 chains and 2000 iterations per chain are reasonable defaults.
-Furthermore, we make use of [**rstan**](https://mc-stan.org/rstan/)'s parallelization, which means to run each chain on a separate CPU core^[More generally, the number of chains is split up as evenly as possible among the number of CPU cores.].
+Furthermore, we make use of [**rstan**](https://mc-stan.org/)'s parallelization, which means to run each chain on a separate CPU core^[More generally, the number of chains is split up as evenly as possible among the number of CPU cores.].
 If you run the following code yourself, you can either rely on an automatic mechanism to detect the number of CPU cores (like the `parallel::detectCores()` function shown below) or adapt `ncores` manually to your system.
 ```{r ref_fit}
 # Set this manually if desired:
@@ -173,7 +173,7 @@ cvvs_fast_refit <- cv_varsel(
   ### 
 )
 ```
-Here, we ignore the warning that SIS is used instead of PSIS (this is due to `nclusters_pred = 20` which we used only to speed up the building of the vignette).
+Here, we ignore the warning that SIS is used (instead of PSIS) because this is due to `nclusters_pred = 20` which we used only to speed up the building of the vignette.
 
 With the `refit_prj = TRUE` results, the predictive performance plot from above now looks as follows:
 ```{r plot_vsel_fast_refit}
@@ -189,7 +189,8 @@ For this final `cv_varsel()` run (with `validate_search = TRUE`, as recommended)
 In practice, we recommend using either the default of `cv_method = "LOO"` (possibly subsampled, see argument `nloo` of `cv_varsel()`) or a larger value for `K` if this is possible in terms of computation time.
 Here, we also perform the $K$ reference model refits outside of `cv_varsel()`.
 Although not strictly necessary here, this is helpful in practice because often, `cv_varsel()` needs to be re-run multiple times in order to try out different argument settings.
-We also illustrate how **projpred**'s CV (i.e., the CV comprising search and performance evaluation, after refitting the reference model $K$ times) can be parallelized, even though this is of little use here (we have only `K = 2` folds and the fold-wise searches and performance evaluations are quite fast, so the parallelization overhead eats up any runtime improvements).
+We also show how **projpred**'s CV (i.e., the CV comprising search and performance evaluation, after refitting the reference model $K$ times) can be parallelized (though we disable it here for vignette building).
+In practice, parallelization is of little use with only `K = 2` folds and fast fold-wise operations, as the parallelization overhead eats up any runtime improvements.
 Note that for this final `cv_varsel()` run, we cannot make use of `cv_varsel.vsel()` (by applying `cv_varsel()` to `cvvs_fast` or `cvvs_fast_refit` instead of `refm_obj`) because of the change in `nterms_max` (here: 9, for `cvvs_fast` and `cvvs_fast_refit`: 20).
 ```{r cv_varsel, message=FALSE}
 # Refit the reference model K times:
@@ -200,7 +201,11 @@ cv_fits <- run_cvfun(
   ###
 )
 # For running projpred's CV in parallel (see cv_varsel()'s argument `parallel`):
-doParallel::registerDoParallel(ncores)
+# Note: Parallel processing is disabled during package building to avoid issues
+use_parallel <- FALSE  # Set to TRUE for actual parallel processing
+if (use_parallel) {
+  doParallel::registerDoParallel(ncores)
+}
 # Final cv_varsel() run:
 cvvs <- cv_varsel(
   refm_obj,
@@ -211,14 +216,16 @@ cvvs <- cv_varsel(
   nclusters_pred = 20,
   ###
   nterms_max = 9,
-  parallel = TRUE,
+  parallel = use_parallel,
   ### In interactive use, we recommend not to deactivate the verbose mode:
   verbose = 0
   ### 
 )
 # Tear down the CV parallelization setup:
-doParallel::stopImplicitCluster()
-foreach::registerDoSEQ()
+if (use_parallel) {
+  doParallel::stopImplicitCluster()
+  foreach::registerDoSEQ()
+}
 ```
 
 #### Predictive performance plot from final `cv_varsel()` run {#plotfinal}
@@ -464,8 +471,10 @@ Finally, we note that there are some restrictions with respect to the augmented-
 The latent projection [@catalina_latent_2021] is a quite general principle for extending **projpred**'s traditional projection to more response families.
 The latent projection is applied when setting argument `latent` of `extend_family()` (which is called by `init_refmodel()`) to `TRUE`.
 The families for which full latent-projection functionality (in particular, `resp_oscale = TRUE`, i.e., post-processing on the original response scale) is currently available are `binomial()`^[Currently, the latent-projection support for the `binomial()` family does not include binomial distributions with more than one trial. In such a case, a workaround is to de-aggregate the Bernoulli trials which belong to the same (aggregated) observation, i.e., to use a "long" dataset.] ^[Like the traditional projection, the latent projection also supports the `brms::bernoulli()` family via `brms::get_refmodel.brmsfit()`.], `poisson()`, `brms::cumulative()`, and `rstanarm::stan_polr()` fits^[For the latent projection based on a "typical" **brms** reference model object, **brms** version 2.19.0 or later is needed.].
-For all other families, you can try to use the latent projection (by setting `latent = TRUE`) and **projpred** should tell you if any features are not available and how to make them available.
+For all other families, it is worth trying the latent projection (by setting `latent = TRUE`); **projpred** will state if any features are not available and how to make them available.
 More details concerning the latent projection are given in the corresponding [latent-projection vignette](https://mc-stan.org/projpred/articles/latent.html).
+For example, section ["Example: Negative binomial distribution"](https://mc-stan.org/projpred/articles/latent.html#negbinex) of that vignette illustrates the use of the latent projection for a negative binomial model, section ["Example: Weibull distribution with right-censored observations"](https://mc-stan.org/projpred/articles/latent.html#weibullcensex) for a Weibull model with right-censored observations, and section ["Example: Log-normal distribution with right-censored observations"](https://mc-stan.org/projpred/articles/latent.html#lognormalcensex) for a log-normal model with right-censored observations.
+The latter two situations are known as parametric survival (or time-to-event) analyses.
 Note that there are some restrictions with respect to the latent projection; **projpred** will throw an informative error if a requested feature is currently not supported for the latent projection.
 
 On the side of the predictors, **projpred** not only supports linear main effects as shown in this vignette, but also interactions, multilevel^[Multilevel models are also known as *hierarchical* models or models with *partially pooled*, *group-level*, or---in frequentist terms---*random* effects.], and---as an experimental feature---additive^[Additive terms are also known as *smooth* terms.] terms.

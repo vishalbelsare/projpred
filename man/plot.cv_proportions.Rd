@@ -20,7 +20,7 @@
 that \code{\link[=cv_proportions]{cv_proportions()}} will be applied to internally before then calling
 \code{\link[=plot.cv_proportions]{plot.cv_proportions()}}.}
 
-\item{text_angle}{Passed to argument \code{angle} of \code{\link[ggplot2:element]{ggplot2::element_text()}} for
+\item{text_angle}{Passed to argument \code{angle} of \code{\link[ggplot2:element_text]{ggplot2::element_text()}} for
 the y-axis tick labels. In case of long predictor names, \code{text_angle = 45}
 might be helpful (for example).}
 
@@ -39,7 +39,7 @@ proportions printed as text inside of the colored tiles are rounded to whole
 percentage points (the plotted proportions themselves are not rounded).
 }
 \examples{
-\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 # Data:
 dat_gauss <- data.frame(y = df_gaussian$y, df_gaussian$x)
 

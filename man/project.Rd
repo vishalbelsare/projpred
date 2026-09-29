@@ -69,7 +69,7 @@ drawing new group-level effects when predicting from a multilevel submodel
 calculating output elements \code{dis} and \code{ce}.)}
 
 \item{verbose}{A single integer value from the set \eqn{\{0, 1, 2\}}{{0, 1,
-  2}} (if \code{!is.null(predictor_terms)}, \eqn{1} and \eqn{2} have the same
+2}} (if \code{!is.null(predictor_terms)}, \eqn{1} and \eqn{2} have the same
 effect), indicating how much information (if any) to print out during the
 computations. Higher values indicate that more information should be
 printed, \code{0} deactivates the verbose mode. Internally, argument \code{verbose}
@@ -146,7 +146,7 @@ default, \code{\link[=varsel]{varsel()}} and \code{\link[=cv_varsel]{cv_varsel()
 or thinning.
 }
 \examples{
-\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 # Data:
 dat_gauss <- data.frame(y = df_gaussian$y, df_gaussian$x)
 

@@ -580,26 +580,31 @@ test_that("`stat` works", {
       } else {
         suggsize_seed <- NULL
       }
-      # Warnings are suppressed, but a suggested size of `NA` (because of a
-      # search which was terminated too early) is tested below:
+      # Warnings are suppressed, but a suggested size of nterms_max (because of
+      # a search which was terminated too early) is tested below:
       suggsize <- suppressWarnings(
         suggest_size(vss[[tstsetup_vs]], stat = stat_crr, seed = suggsize_seed)
       )
       expect_length(suggsize, 1)
-      if (!is.na(suggsize)) {
-        expect_true(is.vector(suggsize, "numeric"),
-                    info = paste(tstsetup, stat_crr, sep = "__"))
-        expect_true(suggsize >= 0, info = paste(tstsetup, stat_crr, sep = "__"))
-      } else {
-        expect_identical(suggsize, NA,
-                         info = paste(tstsetup, stat_crr, sep = "__"))
-        expect_true(
-          vss[[tstsetup_vs]]$nterms_max < vss[[tstsetup_vs]]$nterms_all,
-          info = paste(tstsetup, stat_crr, sep = "__")
-        )
-      }
+      expect_true(is.vector(suggsize, "numeric"),
+                  info = paste(tstsetup, stat_crr, sep = "__"))
+      expect_true(suggsize >= 0, info = paste(tstsetup, stat_crr, sep = "__"))
+      # If the search was terminated early and no submodel satisfies the
+      # criterion, suggest_size() should return nterms_max:
+      expect_true(suggsize <= vss[[tstsetup_vs]]$nterms_max,
+                  info = paste(tstsetup, stat_crr, sep = "__"))
     }
   }
+})
+
+test_that("returns nterms_max when no criterion is met", {
+  skip_if_not(run_vs)
+  tstsetup <- head(names(vss), 1)
+  suggsize <- suppressWarnings(
+    suggest_size(vss[[tstsetup]], stat = "elpd", pct = -1.0)
+  )
+  expect_identical(suggsize, vss[[tstsetup]]$nterms_max,
+                   info = tstsetup)
 })
 
 # ranking() ---------------------------------------------------------------
@@ -747,7 +752,7 @@ test_that("`x` of class `cv_proportions` works", {
   for (tstsetup in names(plotprs)) {
     expect_s3_class(plotprs[[tstsetup]], c("gg", "ggplot"))
     if (run_snaps) {
-      vdiffr::expect_doppelganger(tstsetup, plotprs[[tstsetup]])
+      expect_doppelganger_cust(tstsetup, plotprs[[tstsetup]])
     }
   }
 })
@@ -763,7 +768,7 @@ test_that("plot.ranking() is a shortcut", {
     ))
     expect_s3_class(plotpr_from_rk, c("gg", "ggplot"))
     if (run_snaps) {
-      vdiffr::expect_doppelganger(tstsetup, plotpr_from_rk)
+      expect_doppelganger_cust(tstsetup, plotpr_from_rk)
     }
   }
 })

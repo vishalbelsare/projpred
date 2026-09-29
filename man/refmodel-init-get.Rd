@@ -359,7 +359,7 @@ For the augmented-data projection, the response vector resulting from
 Note that response-specific offsets (i.e., one length-\eqn{N} offset vector
 per response category) are not supported by \pkg{projpred} yet. So far, only
 offsets which are the same across all response categories are supported. This
-is why in case of the \code{\link[brms:brmsfamily]{brms::categorical()}} family, offsets are currently not
+is why in case of the \code{\link[brms:categorical]{brms::categorical()}} family, offsets are currently not
 supported at all.
 
 Currently, \code{object = NULL} (i.e., a \code{datafit}; see section "Value") is not
@@ -383,7 +383,7 @@ supported in case of the latent projection.
 }
 
 \examples{
-\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (requireNamespace("rstanarm", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 # Data:
 dat_gauss <- data.frame(y = df_gaussian$y, df_gaussian$x)
 

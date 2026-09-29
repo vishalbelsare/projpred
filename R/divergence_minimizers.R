@@ -52,7 +52,7 @@ divmin <- function(
     sdivmin <- fit_glmer_callback
     if (getOption("projpred.PQL", FALSE)) {
       # Split up the formula into a fixed and a random part (note: we could also
-      # use lme4::nobars() and lme4::findbars() here):
+      # use reformulas::nobars() and reformulas::findbars() here):
       formula_random <- split_formula_random_gamm4(formula)
       projpred_formulas_no_random <- validate_response_formula(
         formula_random$formula
@@ -306,6 +306,27 @@ fit_gamm_callback <- function(formula, projpred_formula_no_random,
         control = control_callback(family,
                                    optimizer = "optimx",
                                    optCtrl = list(method = "nlminb")),
+        ...
+      ))
+    } else if (grepl("pwrssUpdate", as.character(e))) {
+      # lme4's PIRLS could not reduce the deviance any further, so relax the
+      # convergence tolerance for the PIRLS step by a factor of 10 and retry
+      # (analogous to the automatic fix in fit_glmer_callback()):
+      tolPwrss_new <- 10 * (control$tolPwrss %||%
+                            control_callback(family)$tolPwrss)
+      if (tolPwrss_new > 1e-4) {
+        stop("Encountering a pwrssUpdate error while running the gamm4 ",
+             "fitting procedure, but cannot fix this automatically anymore. ",
+             "You will probably have to tweak lme4 tuning parameters manually ",
+             "(via `...`).")
+      }
+      return(fit_gamm_callback(
+        formula = formula,
+        projpred_formula_no_random = projpred_formula_no_random,
+        projpred_random = projpred_random,
+        data = data,
+        family = family,
+        control = control_callback(family, tolPwrss = tolPwrss_new),
         ...
       ))
     } else {
@@ -1342,11 +1363,11 @@ empty_intersection <- function(x, el_nm = "new") {
 # "GPL (>=2)" (see <https://CRAN.R-project.org/package=lme4>).
 mkNewReTrms_man <- function(re.form, newdata, xlevels, re, D = NULL) {
   stopifnot(!is.null(newdata))
-  tt <- terms(lme4::subbars(re.form))
+  tt <- terms(reformulas::subbars(re.form))
   rfd <- suppressWarnings(
     model.frame(tt, newdata, na.action = na.pass, xlev = xlevels)
   )
-  ReTrms <- lme4::mkReTrms(lme4::findbars(re.form[[2]]), rfd)
+  ReTrms <- reformulas::mkReTrms(reformulas::findbars(re.form[[2]]), rfd)
   ns.re <- names(re)
   nRnms <- names(Rcnms <- ReTrms$cnms)
   if (!all(nRnms %in% ns.re)) {
@@ -1459,7 +1480,6 @@ repair_re.merMod <- function(object, newdata) {
          "to have disjoint level sets.")
   }
   re_fml <- ("lme4" %:::% "reOnly")(formula(object))
-  # Note: Calling lme4::mkNewReTrms() with `re.form = NULL` fails.
   ranefs_prep <- lme4::mkNewReTrms(object,
                                    newdata = newdata,
                                    re.form = re_fml,

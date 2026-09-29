@@ -1,8 +1,8 @@
 Package: projpred
 Encoding: UTF-8
 Title: Projection Predictive Feature Selection
-Version: 2.9.1
-Date: 2025-07-09
+Version: 2.10.0.9000 
+Date: 2025-12-05
 Authors@R: c(person("Juho", "Piironen", role = c("aut"),
                     email = "juho.t.piironen@gmail.com"),
              person("Markus", "Paasiniemi", role = "aut"),
@@ -56,9 +56,11 @@ Imports:
     MASS,
     ordinal,
     nnet,
-    mclogit
+    mclogit,
+    reformulas,
 Suggests:
     ggrepel,
+    ggfortify,
     rstanarm,
     brms,
     nlme,
@@ -88,5 +90,5 @@ Additional_repositories:
     https://stan-dev.r-universe.dev/
 LazyData: TRUE
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 VignetteBuilder: knitr, rmarkdown
+Config/roxygen2/version: 8.0.0
